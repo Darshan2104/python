@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #messages {
+            border: 1px solid #ccc;
+            height: 400px;
+            overflow-y: scroll;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        .system { background-color: #e7f3ff; }
+        .user { background-color: #f0f0f0; }
+        .error { background-color: #ffe7e7; }
+        #input-container {
+            display: flex;
+            gap: 10px;
+        }
+        #messageInput {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        #sendButton {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #sendButton:hover {
+            background-color: #0056b3;
+        }
+        #sendButton:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <h1>AI-Powered WebSocket Chat</h1>
+    <div>
+        <label for="username">Username:</label>
+        <input type="text" id="username" placeholder="Enter your username" value="User">
+        <button id="connectButton">Connect</button>
+        <button id="disconnectButton" disabled>Disconnect</button>
+    </div>
+    <div style="margin: 10px 0; padding: 10px; background-color: #f0f8ff; border-radius: 5px;">
+        <strong>How to use:</strong> Type <code>@ai your question</code> to interact with the AI assistant. 
+        Example: <code>@ai What is machine learning?</code>
+    </div>
+    <br>
+    <div id="messages"></div>
+    <div id="input-container">
+        <input type="text" id="messageInput" placeholder="Type your message..." disabled>
+        <button id="sendButton" disabled>Send</button>
+    </div>
+
+    <script>
+        let socket = null;
+        let connected = false;
+        
+        const messagesDiv = document.getElementById('messages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const connectButton = document.getElementById('connectButton');
+        const disconnectButton = document.getElementById('disconnectButton');
+        const usernameInput = document.getElementById('username');
+
+        function addMessage(data) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            
+            if (data.type === 'system') {
+                messageDiv.className += ' system';
+                messageDiv.textContent = `[SYSTEM] ${data.message}`;
+            } else if (data.type === 'message') {
+                messageDiv.className += ' user';
+                const isAI = data.is_ai || false;
+                const prefix = isAI ? '🤖 [AI Assistant]' : `[${data.username}]`;
+                messageDiv.textContent = `${prefix} ${data.message}`;
+                
+                if (isAI) {
+                    messageDiv.style.backgroundColor = '#e8f5e8';
+                    messageDiv.style.borderLeft = '4px solid #4CAF50';
+                    messageDiv.style.paddingLeft = '15px';
+                }
+            } else if (data.type === 'error') {
+                messageDiv.className += ' error';
+                messageDiv.textContent = `[ERROR] ${data.message}`;
+            }
+            
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function connect() {
+            const username = usernameInput.value.trim() || 'Anonymous';
+            
+            socket = new WebSocket('ws://localhost:8765');
+            
+            socket.onopen = function(event) {
+                connected = true;
+                connectButton.disabled = true;
+                disconnectButton.disabled = false;
+                messageInput.disabled = false;
+                sendButton.disabled = false;
+                usernameInput.disabled = true;
+                
+                addMessage({
+                    type: 'system',
+                    message: 'Connected to chat server'
+                });
+            };
+            
+            socket.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                addMessage(data);
+            };
+            
+            socket.onclose = function(event) {
+                connected = false;
+                connectButton.disabled = false;
+                disconnectButton.disabled = true;
+                messageInput.disabled = true;
+                sendButton.disabled = true;
+                usernameInput.disabled = false;
+                
+                addMessage({
+                    type: 'system',
+                    message: 'Disconnected from server'
+                });
+            };
+            
+            socket.onerror = function(error) {
+                addMessage({
+                    type: 'error',
+                    message: 'Connection error occurred'
+                });
+            };
+        }
+
+        function disconnect() {
+            if (socket) {
+                socket.close();
+            }
+        }
+
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            const username = usernameInput.value.trim() || 'Anonymous';
+            
+            if (message && connected) {
+                const data = {
+                    username: username,
+                    message: message
+                };
+                
+                socket.send(JSON.stringify(data));
+                messageInput.value = '';
+            }
+        }
+
+        // Event listeners
+        connectButton.addEventListener('click', connect);
+        disconnectButton.addEventListener('click', disconnect);
+        sendButton.addEventListener('click', sendMessage);
+        
+        messageInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
