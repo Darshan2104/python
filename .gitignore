@@ -1,2 +1,4 @@
 LangGraph/.env
 LangGraph/chroma_db
+.ipynb_checkpoints
+DSA/.ipynb_checkpoints/
