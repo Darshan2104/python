@@ -10,10 +10,7 @@
 
 ## UML Class Diagram
 
-![](LLD/StackOverFlow/stackoverflow-class-diagram.png)
-
-## Implementations 
-#### [Python Implementation](../solutions/python/stackoverflow/)
+![](LLD/StackOverFlow/_stackoverflow-class-diagram.png)
 
 ## Classes, Interfaces and Enumerations
 1. The **User** class represents a user of the Stack Overflow system, with properties such as id, username, email, and reputation.
